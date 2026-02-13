@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de KPI Amoretty</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- jsPDF & AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        amoretty: {
+                            dark: '#0f172a',    // Slate 900
+                            card: '#1e293b',    // Slate 800
+                            accent: '#0ea5e9',  // Sky 500
+                            glow: '#38bdf8',    // Sky 400
+                            border: '#334155'   // Slate 700
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        .input-field {
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+            border-color: #38bdf8;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-sans">
+
+    <!-- Navbar -->
+    <nav class="border-b border-amoretty-border bg-amoretty-dark/95 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-tr from-blue-600 to-cyan-400 p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-100 to-cyan-200">
+                        KPI Amoretty
+                    </span>
+                </div>
+                <div class="text-sm text-slate-400 hidden sm:block">Herramienta de Análisis Financiero</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Input Section (Left) -->
+        <section class="lg:col-span-4 space-y-6">
+            <div class="bg-amoretty-card rounded-2xl border border-amoretty-border p-6 shadow-xl">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amoretty-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Parámetros de Entrada
+                </h2>
+
+                <form id="kpiForm" class="space-y-4">
+                    <!-- Period Selector -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Tipo de Cálculo</label>
+                        <select id="period" class="input-field w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-amoretty-accent">
+                            <option value="Mensual">Mensual</option>
+                            <option value="Anual">Anual</option>
+                            <option value="Por Producto">Por Producto</option>
+                        </select>
+                    </div>
+
+                    <!-- Costos Fijos -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Costos Fijos Totales ($)</label>
+                        <input type="number" id="fixedCosts" value="5000" min="0" step="100" class="input-field w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-amoretty-accent placeholder-slate-600">
+                    </div>
+
+                    <!-- Precio de Venta -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Precio Venta Unitario ($)</label>
+                        <input type="number" id="pricePerUnit" value="150" min="0.01" step="0.5" class="input-field w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-amoretty-accent placeholder-slate-600">
+                    </div>
+
+                    <!-- Costo Variable -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Costo Variable Unitario ($)</label>
+                        <input type="number" id="variableCostPerUnit" value="80" min="0" step="0.5" class="input-field w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-amoretty-accent placeholder-slate-600">
+                    </div>
+
+                    <!-- Ventas Estimadas -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Ventas Estimadas (Unidades)</label>
+                        <input type="number" id="estimatedSales" value="100" min="1" step="1" class="input-field w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-amoretty-accent placeholder-slate-600">
+                    </div>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-slate-700">
+                    <button onclick="generatePDF()" class="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-semibold py-3 px-4 rounded-lg transition-all shadow-lg shadow-blue-900/40">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Descargar Reporte PDF
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results & Visualization (Right) -->
+        <section class="lg:col-span-8 space-y-6">
+            
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Punto Equilibrio Unidades -->
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 w-16 h-16 bg-blue-500/10 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                    <p class="text-slate-400 text-xs uppercase tracking-wider font-semibold">Punto de Equilibrio</p>
+                    <h3 id="res-be-units" class="text-2xl font-bold text-white mt-1">0</h3>
+                    <p class="text-xs text-slate-500 mt-1">Unidades</p>
+                </div>
+
+                <!-- Punto Equilibrio Moneda -->
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 w-16 h-16 bg-cyan-500/10 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                    <p class="text-slate-400 text-xs uppercase tracking-wider font-semibold">P.E. Monetario</p>
+                    <h3 id="res-be-money" class="text-2xl font-bold text-white mt-1">$0.00</h3>
+                    <p class="text-xs text-slate-500 mt-1">Ingresos Mínimos</p>
+                </div>
+
+                <!-- Margen de Contribución -->
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 w-16 h-16 bg-purple-500/10 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                    <p class="text-slate-400 text-xs uppercase tracking-wider font-semibold">Margen Contrib.</p>
+                    <h3 id="res-margin" class="text-2xl font-bold text-white mt-1">$0.00</h3>
+                    <p class="text-xs text-slate-500 mt-1">Por Unidad</p>
+                </div>
+
+                <!-- Resultado Neto -->
+                <div id="card-net-result" class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group transition-colors">
+                    <div class="absolute right-0 top-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                    <p class="text-slate-400 text-xs uppercase tracking-wider font-semibold">Resultado Neto</p>
+                    <h3 id="res-net" class="text-2xl font-bold text-white mt-1">$0.00</h3>
+                    <p id="res-net-label" class="text-xs text-slate-500 mt-1">Ganancia/Pérdida</p>
+                </div>
+            </div>
+
+            <!-- Chart Container -->
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-4 shadow-xl h-[400px] relative">
+                <canvas id="breakEvenChart"></canvas>
+            </div>
+            
+            <!-- Error Message Container -->
+            <div id="errorMessage" class="hidden bg-red-900/20 border border-red-800 text-red-200 px-4 py-3 rounded-lg text-sm text-center">
+                
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-auto border-t border-slate-800 py-6 text-center text-slate-500 text-sm">
+        <p>&copy; <span id="year"></span> KPI Amoretty Systems. Desarrollado para análisis financiero de alto nivel.</p>
+    </footer>
+
+    <script>
+        // --- Initialization ---
+        document.getElementById('year').textContent = new Date().getFullYear();
+        
+        let chartInstance = null;
+        
+        // Element References
+        const inputs = {
+            fixedCosts: document.getElementById('fixedCosts'),
+            price: document.getElementById('pricePerUnit'),
+            variableCost: document.getElementById('variableCostPerUnit'),
+            sales: document.getElementById('estimatedSales'),
+            period: document.getElementById('period')
+        };
+
+        const results = {
+            beUnits: document.getElementById('res-be-units'),
+            beMoney: document.getElementById('res-be-money'),
+            margin: document.getElementById('res-margin'),
+            net: document.getElementById('res-net'),
+            netLabel: document.getElementById('res-net-label'),
+            netCard: document.getElementById('card-net-result'),
+            error: document.getElementById('errorMessage')
+        };
+
+        // --- Logic & Calculations ---
+        function calculate() {
+            // 1. Get Values
+            const fc = parseFloat(inputs.fixedCosts.value) || 0;
+            const p = parseFloat(inputs.price.value) || 0;
+            const vc = parseFloat(inputs.variableCost.value) || 0;
+            const q = parseFloat(inputs.sales.value) || 0;
+
+            // 2. Validation
+            results.error.classList.add('hidden');
+            if (p <= vc) {
+                results.error.textContent = "Error Crítico: El Precio de Venta debe ser mayor al Costo Variable para generar margen.";
+                results.error.classList.remove('hidden');
+                // Don't return, allow seeing negative impact, but warn user
+            }
+
+            // 3. Core Formulas
+            const contributionMargin = p - vc;
+            // Avoid division by zero for infinite Break Even
+            let breakEvenUnits = 0;
+            if (contributionMargin > 0) {
+                breakEvenUnits = fc / contributionMargin;
+            } else {
+                breakEvenUnits = 0; // Or infinity concept
+            }
+            
+            const breakEvenMoney = breakEvenUnits * p;
+            const totalRevenue = p * q;
+            const totalCosts = fc + (vc * q);
+            const profit = totalRevenue - totalCosts;
+
+            // 4. Update UI Text
+            const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+            const numFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
+
+            results.beUnits.textContent = numFmt.format(breakEvenUnits);
+            results.beMoney.textContent = currencyFmt.format(breakEvenMoney);
+            results.margin.textContent = currencyFmt.format(contributionMargin);
+            results.net.textContent = currencyFmt.format(profit);
+
+            // Conditional Styling for Profit/Loss
+            if (profit >= 0) {
+                results.net.classList.remove('text-red-400');
+                results.net.classList.add('text-emerald-400');
+                results.netLabel.textContent = "Ganancia Estimada";
+                results.netCard.classList.remove('border-red-900/50');
+                results.netCard.classList.add('border-emerald-900/50');
+            } else {
+                results.net.classList.remove('text-emerald-400');
+                results.net.classList.add('text-red-400');
+                results.netLabel.textContent = "Pérdida Estimada";
+                results.netCard.classList.remove('border-emerald-900/50');
+                results.netCard.classList.add('border-red-900/50');
+            }
+
+            // 5. Update Chart
+            updateChart(fc, p, vc, breakEvenUnits, q);
+        }
+
+        // --- Chart.js Configuration ---
+        function updateChart(fc, price, vc, beUnits, estSales) {
+            const ctx = document.getElementById('breakEvenChart').getContext('2d');
+            
+            // Determine X-Axis Range
+            // We want to see a bit past the larger of (BreakEvenPoint OR EstimatedSales)
+            const maxUnits = Math.max(beUnits, estSales) * 1.5;
+            const steps = 10; // Number of points to plot
+            const stepSize = maxUnits / steps;
+
+            const labels = [];
+            const dataRevenue = [];
+            const dataTotalCost = [];
+            const dataFixedCost = [];
+
+            for (let i = 0; i <= steps; i++) {
+                const x = Math.round(i * stepSize);
+                labels.push(x);
+                dataRevenue.push(x * price);
+                dataTotalCost.push(fc + (x * vc));
+                dataFixedCost.push(fc);
+            }
+
+            // Destroy previous instance if exists
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Create Gradient for Profit Area
+            // Since Chart.js filling is tricky with intersection, we keep it clean with lines 
+            // and use semi-transparent fills below lines if needed, but for Break-Even, 
+            // clean lines with an intersection point annotation is best.
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Ingresos Totales',
+                            data: dataRevenue,
+                            borderColor: '#38bdf8', // Cyan
+                            backgroundColor: 'rgba(56, 189, 248, 0.05)',
+                            borderWidth: 3,
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Costos Totales',
+                            data: dataTotalCost,
+                            borderColor: '#ef4444', // Red
+                            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                            borderWidth: 3,
+                            tension: 0.1,
+                            fill: false // To keep it clean
+                        },
+                        {
+                            label: 'Costos Fijos',
+                            data: dataFixedCost,
+                            borderColor: '#64748b', // Slate 500
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: 'rgba(100, 116, 139, 0.1)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#cbd5e1',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        annotation: {
+                            // Note: annotation plugin is external, doing manual intersection highlight via dataset point
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' },
+                            title: { display: true, text: 'Unidades Vendidas', color: '#64748b' }
+                        },
+                        y: {
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' },
+                            title: { display: true, text: 'Monto ($)', color: '#64748b' }
+                        }
+                    }
+                },
+                plugins: [{
+                    // Custom plugin to draw the Break Even Point circle
+                    id: 'breakEvenPoint',
+                    afterDraw: (chart) => {
+                        // Only draw if lines intersect within range
+                        if (beUnits >= 0 && beUnits <= maxUnits && price > vc) {
+                            const ctx = chart.ctx;
+                            const xAxis = chart.scales.x;
+                            const yAxis = chart.scales.y;
+                            
+                            // Map value to pixels
+                            // Since our labels are discrete steps, we need linear interpolation or getPixelForValue
+                            // ChartJS 3+ handles getPixelForValue for linear scales even if labels are used
+                            // But we are using category axis by default with labels array. Let's switch X to linear logic or approximation.
+                            // Better approach: calculate pixel X based on ratio
+                            
+                            const xPixel = xAxis.getPixelForValue(steps * (beUnits / maxUnits)); // Approx for category
+                            // Actually, let's just find the pixel based on value if we switch to linear scale.
+                            // For simplicity in this robust single file, we will just rely on the intersection of the rendered lines visual.
+                            // Or, we add a specific point to the dataset.
+                        }
+                    }
+                }]
+            });
+        }
+
+        // --- PDF Generation ---
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Branding Colors (RGB for PDF)
+            const blueDark = [15, 23, 42]; // Slate 900
+            const blueAccent = [14, 165, 233]; // Sky 500
+
+            // Title
+            doc.setFontSize(22);
+            doc.setTextColor(...blueAccent);
+            doc.text("Calculadora de KPI Amoretty", 14, 20);
+            
+            // Metadata
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Fecha del Reporte: ${new Date().toLocaleDateString()}`, 14, 28);
+            doc.text(`Tipo de Cálculo: ${inputs.period.value}`, 14, 33);
+
+            // Divider
+            doc.setDrawColor(...blueAccent);
+            doc.line(14, 38, 196, 38);
+
+            // Data Preparation
+            const fc = parseFloat(inputs.fixedCosts.value);
+            const p = parseFloat(inputs.price.value);
+            const vc = parseFloat(inputs.variableCost.value);
+            
+            // FIX: Access the correct 'sales' property, not 'estimatedSales'
+            const q = parseFloat(inputs.sales.value);
+            
+            const cm = p - vc;
+            const beu = cm > 0 ? fc / cm : 0;
+            const bem = beu * p;
+            const profit = (p * q) - (fc + (vc * q));
+            
+            const currency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+            // Inputs Table
+            doc.autoTable({
+                startY: 45,
+                head: [['Parámetro', 'Valor Ingresado']],
+                body: [
+                    ['Costos Fijos Totales', currency(fc)],
+                    ['Precio de Venta Unitario', currency(p)],
+                    ['Costo Variable Unitario', currency(vc)],
+                    ['Ventas Estimadas', `${q} unidades`],
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: blueDark, textColor: [255, 255, 255] },
+                styles: { fontSize: 11, cellPadding: 3 }
+            });
+
+            // Results Table
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 15,
+                head: [['Indicador KPI', 'Resultado Calculado']],
+                body: [
+                    ['Margen de Contribución', currency(cm)],
+                    ['Punto de Equilibrio (Unidades)', `${beu.toFixed(1)} u`],
+                    ['Punto de Equilibrio (Monetario)', currency(bem)],
+                    ['Resultado Neto (Ganancia/Pérdida)', currency(profit)],
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: blueAccent, textColor: [255, 255, 255] },
+                styles: { fontSize: 12, fontStyle: 'bold' }
+            });
+
+            // Conclusion Note
+            const profitStatus = profit >= 0 ? "GANANCIA" : "PÉRDIDA";
+            doc.setFontSize(11);
+            doc.setTextColor(50, 50, 50);
+            doc.text(`Conclusión: Basado en las ventas estimadas de ${q} unidades, el negocio proyecta una situación de ${profitStatus}.`, 14, doc.lastAutoTable.finalY + 15);
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text("Generado por KPI Amoretty Systems", 14, 280);
+
+            doc.save('Reporte_KPI_Amoretty.pdf');
+        }
+
+        // --- Event Listeners ---
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+
+        // Initial Calculation
+        window.addEventListener('load', calculate);
+
+    </script>
+</body>
+</html>
